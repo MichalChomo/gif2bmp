@@ -2,6 +2,9 @@
 #define GIF2BMP_H
 
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <getopt.h>
 
 typedef struct {
     int64_t bmpSize;
