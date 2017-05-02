@@ -5,37 +5,25 @@ void usage() {
             "Usage: ./gif2bmp [-i ifile] [-o ofile] [-l logfile] | -h\n");
 }
 
-int createLogfile(char *fileName, int uncodedSize, int codedSize) {
-    FILE *lfp;
-    char login[] = "xchomo01";
-
-    lfp = fopen(fileName, "w");
-    if (lfp == NULL) {
-        fprintf(stderr, "Cannot open logfile %s\n.", fileName);
-        return 1;
-    }
-    fprintf(lfp, "login = %s\nuncodedSize = %d\ncodedSize = %d\n", login,
-            uncodedSize, codedSize);
-    fclose(lfp);
-
-    return 0;
-}
-
 int main(int argc, char *argv[]) {
-    char *ifile;
-    char *ofile;
-    char *logfile;
+    char *ifile = NULL;
+    char *ofile = NULL;
+    char *logfile = NULL;
     int c = 0;
-    struct stat fileStats;
     tGIF2BMP g2b;
+    FILE *ifp;
+    FILE *ofp;
 
-    while (-1 != (c = getopt(argc, argv, "i:o:h"))) {
+    while (-1 != (c = getopt(argc, argv, "i:o:l:h"))) {
         switch (c) {
             case 'i':
                 ifile = optarg;
                 break;
             case 'o':
                 ofile = optarg;
+                break;
+            case 'l':
+                logfile = optarg;
                 break;
             case 'h':
                 usage();
@@ -46,12 +34,26 @@ int main(int argc, char *argv[]) {
             default: break;
         }
     }
-    printf("infile: %s\noutfile: %s\n", ifile, ofile);
-    if (0 != stat(ifile, &fileStats)) {
-        fprintf(stderr, "Cannot get input file stats.\n");
+
+    ifp = fopen(ifile, "r");
+    if (ifp == NULL) {
+        ifp = stdin;
     }
-    g2b.gifSize = (int64_t) fileStats.st_size;
-    printf("infile size: %ld\n", g2b.gifSize);
+
+    ofp = fopen(ofile, "w");
+    if (ofp == NULL) {
+        ofp = stdout;
+    }
+
+    if (0 != gif2bmp(&g2b, ifp, ofp)) {
+        return 1;
+    }
+
+    if (logfile != NULL) {
+        if (0 != createLogfile(logfile, &g2b)) {
+            fprintf(stderr, "Cannot create logfile.\n");
+        }
+    }
 
     return 0;
 }
