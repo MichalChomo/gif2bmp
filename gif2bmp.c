@@ -86,43 +86,67 @@ int64_t getFileSize(const char *fileName) {
     return (int64_t)st.st_size;
 }
 
-tDictNode *createNode() {
-    tDictNode *tmpNode = NULL;
+void dictInit(tDict *dict, uint16_t size) {
+    tDictRow row;
 
-    tmpNode = malloc(sizeof(tDictNode));
-    if (tmpNode != NULL) {
-        tmpNode->isLeaf = false;
-        for (int i = 0; i < DICT_LEAF_COUNT; ++i) {
-            tmpNode->children[i] = NULL;
-        }
+    row.size = 1;
+    dict->rows = malloc(2 * size * sizeof(tDictRow *));
+    memset(dict->rows, 0, 2 * size * sizeof(tDictRow *));
+    for (uint16_t i = 0; i < size; ++i) {
+        row.colorIndexes = malloc(sizeof(uint16_t));
+        *(row.colorIndexes) = i;
+        ((dict->rows)[i]) = malloc(sizeof(tDictRow));
+        *((dict->rows)[i]) = row;
+    }
+    for (uint16_t i = size; i < size * 2; ++i) {
+        ((dict->rows)[i]) = NULL;
     }
 
-    return tmpNode;
+    dict->size = 2 * size;
 }
 
-void insert(tDictNode *root, unsigned char *key, int8_t keyLength) {
-    tDictNode *tmpNode = root;
+void dictInsert(tDict *dict, uint16_t index, uint16_t colorIndex) {
+    tDictRow *row;
 
-    while (keyLength > 0) {
-        if (tmpNode->children[*key] == NULL) {
-            tmpNode->children[*key] = createNode();
-        }
-        tmpNode = tmpNode->children[*key];
-        ++key;
-        --keyLength;
-    }
-    tmpNode->isLeaf = true;
-}
-
-void destroy(tDictNode *root) {
-    if (root == NULL) {
+    if (index > dict->size) {
         return;
     }
-
-    for (int i = 0; i < DICT_LEAF_COUNT; ++i) {
-        destroy(root->children[i]);
+    row = (dict->rows)[index];
+    if (row == NULL) {
+        row == malloc(sizeof(tDictRow));
     }
-    free(root);
+    row->colorIndexes = realloc(row->colorIndexes, row->size + 1);
+    row->colorIndexes += row->size;
+    memcpy(&(row->colorIndexes), &colorIndex, sizeof(uint16_t));
+    ++(row->size);
+
+    ++(dict->size);
+}
+
+int dictSearch(tDict *dict, uint16_t index) {
+    if (index > dict->size) {
+        return -1;
+    }
+    if ((dict->rows)[index] != NULL) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void dictDestroy(tDict *dict) {
+    tDictRow *row;
+
+    for (uint16_t i = 0; i < dict->size; ++i) {
+        row = (dict->rows)[i];
+        if (row != NULL) {
+            if (row->colorIndexes != NULL) {
+                free(row->colorIndexes);
+            }
+            free(row);
+        }
+    }
+    free(dict->rows);
 }
 
 int parseGif(tGif *gif, unsigned char *buffer) {
@@ -131,6 +155,7 @@ int parseGif(tGif *gif, unsigned char *buffer) {
     tGifGce *gceArrPtr = NULL;
     tGifImg img;
     tGifImg *imgPtr = NULL;
+    uint16_t word = 1;
 
     memset(gif, 0, sizeof(tGif));
     // Parse header.
@@ -150,8 +175,8 @@ int parseGif(tGif *gif, unsigned char *buffer) {
 
     // Parse global color table.
     if ((gif->info).isGlobalTable > 0) {
-        (gif->info).globalTableSize = getTableSize(lsd.packedField);
-        getGlobalTable(&(gif->globalColorTable), (gif->info).globalTableSize,
+        (gif->info).globalTableSize = getColorTableSize(lsd.packedField);
+        getColorTable(&(gif->globalColorTable), (gif->info).globalTableSize,
                 buffer);
         buffer += (gif->info).globalTableSize * sizeof(tColor) - 1;
     }
@@ -169,11 +194,6 @@ int parseGif(tGif *gif, unsigned char *buffer) {
         buffer += sizeof(tGifGce);
     }
 
-    printf("\n\n");
-    for (int i = 0; i < 6; ++i) {
-        printf("%02x ", *buffer);
-        ++buffer;
-    }
     // Parse image descriptors.
     while (isImgDesc(buffer)) {
         ++buffer;
@@ -183,8 +203,19 @@ int parseGif(tGif *gif, unsigned char *buffer) {
         imgPtr = gif->images;
         imgPtr += (gif->info).imgCount - 1;
         getImgDesc(&(img.desc), buffer);
+        buffer += sizeof(tGifImgDesc) - 1;
         getImgInfo(&(img.info), img.desc.packedField);
+        if (img.info.isLocalTable > 0) {
+            img.info.localTableSize = getColorTableSize(img.desc.packedField);
+            getColorTable(&(img.localColorTable), img.info.localTableSize,
+                    buffer);
+            buffer += img.info.localTableSize * sizeof(tColor) - 1;
+        }
     }
+
+    img.info.lzwMinCodeSize = word << (*buffer);
+    ++buffer;
+    decodeLzwData(&img, buffer);
 
     return 0;
 }
@@ -211,20 +242,20 @@ void getGifLsd(tGifLsd *lsd, unsigned char *buffer) {
     ++buffer;
 }
 
-uint16_t getTableSize(uint8_t pf) {
+uint16_t getColorTableSize(uint8_t pf) {
     // Get last 3 bits from packed field.
     uint8_t n = pf & 7;
-    uint16_t res = 2;
+    uint16_t res = 1;
     // Return size, it equals 2^(n + 1).
-    return res << n;
+    return res << (n + 1);
 }
 
-void getGlobalTable(tColor **gct, uint16_t size, unsigned char *buffer) {
+void getColorTable(tColor **ct, uint16_t size, unsigned char *buffer) {
     tColor c;
-    tColor *gctStart = NULL;
+    tColor *ctStart = NULL;
 
-    *gct = malloc(size * sizeof(tColor));
-    gctStart = *gct;
+    *ct = malloc(size * sizeof(tColor));
+    ctStart = *ct;
     for (; size > 0; --size) {
         c.red = *buffer;
         ++buffer;
@@ -232,21 +263,21 @@ void getGlobalTable(tColor **gct, uint16_t size, unsigned char *buffer) {
         ++buffer;
         c.blue = *buffer;
         ++buffer;
-        memcpy(*gct, &c, sizeof(tColor));
-        ++(*gct);
+        memcpy(*ct, &c, sizeof(tColor));
+        ++(*ct);
     }
 
-    *gct = gctStart;
+    *ct = ctStart;
 }
 
-void printGct(tColor *gct, uint16_t size) {
+void printColorTable(tColor *ct, uint16_t size) {
     tColor c;
 
     printf("Global color table:\n");
     for (; size > 0; --size) {
-        c = *gct;
+        c = *ct;
         printf("%02x %02x %02x||", c.red, c.green, c.blue);
-        ++gct;
+        ++ct;
     }
     printf("\n");
 }
@@ -297,10 +328,18 @@ void getImgInfo(tGifImgInfo *info, uint8_t pf) {
     info->isLocalTable = pf & GIF_IMG_LCT_FLAG;
     info->isInterlace = pf & GIF_IMG_INTERLACE_FLAG;
     info->isSort = pf & GIF_IMG_SORT_FLAG;
-    info->localTableSize = getTableSize(pf);
+    info->localTableSize = getColorTableSize(pf);
+}
+
+void decodeLzwData(tGifImg *img, unsigned char *buffer) {
+    tDict dict;
+
+    dictInit(&dict, img->info.lzwMinCodeSize);
+    dictDestroy(&dict); 
 }
 
 void freeGif(tGif *gif) {
+    free(gif->images);
     free(gif->globalColorTable);
     free(gif->gceArr);
 }

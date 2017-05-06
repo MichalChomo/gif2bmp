@@ -23,8 +23,6 @@
 #define GIF_IMG_INTERLACE_FLAG 0x04
 #define GIF_IMG_SORT_FLAG 0x02
 
-#define DICT_LEAF_COUNT 256
-
 #define BUFFER_PART 256
 
 typedef struct {
@@ -62,17 +60,18 @@ typedef struct {
 }tGifImgDesc;
 
 typedef struct {
-    uint8_t isLocalTable;
-    uint8_t isInterlace;
-    uint8_t isSort;
+    uint8_t  isLocalTable;
+    uint8_t  isInterlace;
+    uint8_t  isSort;
     uint16_t localTableSize;
+    uint16_t lzwMinCodeSize;
 }tGifImgInfo;
 
 typedef struct {
-    tGifImgDesc   desc;
+    tGifImgDesc    desc;
     tColor        *localColorTable;
     unsigned char *data;
-    tGifImgInfo   info;
+    tGifImgInfo    info;
 }tGifImg;
 
 typedef struct {
@@ -86,16 +85,21 @@ typedef struct {
 typedef struct {
     unsigned char header[GIF_HEADER_SIZE];
     tGifLsd       lsd;
-    tColor        *globalColorTable;
-    tGifGce       *gceArr;
-    tGifImg       *images;
+    tColor       *globalColorTable;
+    tGifGce      *gceArr;
+    tGifImg      *images;
     tGifInfo      info;
 }tGif;
 
-typedef struct tDictNode {
-    struct tDictNode *children[DICT_LEAF_COUNT];
-    bool   isLeaf;
-}tDictNode;
+typedef struct {
+    uint16_t *colorIndexes;
+    uint8_t   size;
+}tDictRow;
+
+typedef struct {
+    tDictRow **rows;
+    uint16_t   size;
+}tDict;
 
 /**
  * Convert image in .gif format to .bmp format.
@@ -124,11 +128,13 @@ int createLogfile(char *fileName, tGIF2BMP *g2b);
  */
 int64_t getFileSize(const char *fileName);
 
-tDictNode *createNode();
+void dictInit(tDict *dict, uint16_t size);
 
-void insert(tDictNode *root, unsigned char *key, int8_t keyLength);
+void dictInsert(tDict *dict, uint16_t index, uint16_t colorIndex);
 
-void destroy(tDictNode *root);
+int dictSearch(tDict *dict, uint16_t index);
+
+void dictDestroy(tDict *dict);
 
 int parseGif(tGif *gif, unsigned char *buffer);
 
@@ -136,11 +142,11 @@ int checkHeader(unsigned char *buffer);
 
 void getGifLsd(tGifLsd *lsd, unsigned char *buffer);
 
-uint16_t getTableSize(uint8_t pf);
+uint16_t getColorTableSize(uint8_t pf);
 
-void getGlobalTable(tColor **gct, uint16_t size, unsigned char *buffer);
+void getColorTable(tColor **ct, uint16_t size, unsigned char *buffer);
 
-void printGct(tColor *gct, uint16_t size);
+void printColorTable(tColor *ct, uint16_t size);
 
 int isGce(unsigned char *buffer);
 
@@ -151,6 +157,8 @@ int isImgDesc(unsigned char *buffer);
 void getImgDesc(tGifImgDesc *id, unsigned char *buffer);
 
 void getImgInfo(tGifImgInfo *info, uint8_t pf);
+
+void decodeLzwData(tGifImg *img, unsigned char *buffer);
 
 void freeGif(tGif *gif);
 #endif
