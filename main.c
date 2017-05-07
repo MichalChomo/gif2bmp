@@ -1,3 +1,9 @@
+//  Name: Michal Chomo
+// Login: xchomo01
+//  Date: 5.5.2017
+//
+//  Main program, contains parsing arguments and calling library functions.
+
 #include "gif2bmp.h"
 
 void usage() {

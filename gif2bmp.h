@@ -1,3 +1,9 @@
+//  Name: Michal Chomo
+// Login: xchomo01
+//  Date: 5.5.2017
+//
+//  Header file with constants, data structures and function definitions.
+
 #ifndef GIF2BMP_H
 #define GIF2BMP_H
 
@@ -24,6 +30,8 @@
 #define GIF_IMG_SORT_FLAG 0x02
 
 #define BUFFER_PART 256
+
+#define LZW_MAX_CODE_SIZE 12
 
 typedef struct {
     int64_t bmpSize;
@@ -64,13 +72,12 @@ typedef struct {
     uint8_t  isInterlace;
     uint8_t  isSort;
     uint16_t localTableSize;
-    uint16_t lzwMinCodeSize;
 }tGifImgInfo;
 
 typedef struct {
     tGifImgDesc    desc;
     tColor        *localColorTable;
-    unsigned char *data;
+    uint8_t *data;
     tGifImgInfo    info;
 }tGifImg;
 
@@ -83,7 +90,7 @@ typedef struct {
 }tGifInfo;
 
 typedef struct {
-    unsigned char header[GIF_HEADER_SIZE];
+    uint8_t header[GIF_HEADER_SIZE];
     tGifLsd       lsd;
     tColor       *globalColorTable;
     tGifGce      *gceArr;
@@ -92,13 +99,14 @@ typedef struct {
 }tGif;
 
 typedef struct {
-    uint16_t *colorIndexes;
+    uint8_t  *colorIndexes;
     uint8_t   size;
 }tDictRow;
 
 typedef struct {
     tDictRow **rows;
     uint16_t   size;
+    uint16_t   insertIndex;
 }tDict;
 
 /**
@@ -110,7 +118,7 @@ typedef struct {
  */
 int gif2bmp(tGIF2BMP *gif2bmp, FILE *inputFile, FILE *outputFile);
 
-void loadFileToBuffer(unsigned char **buffer, FILE *fp, int64_t size);
+void loadFileToBuffer(uint8_t **buffer, FILE *fp, int64_t size);
 
 
 /**
@@ -130,35 +138,41 @@ int64_t getFileSize(const char *fileName);
 
 void dictInit(tDict *dict, uint16_t size);
 
-void dictInsert(tDict *dict, uint16_t index, uint16_t colorIndex);
+void dictInsert(tDict *dict, tDictRow *row);
 
-int dictSearch(tDict *dict, uint16_t index);
+void dictSearch(tDict *dict, uint16_t index, tDictRow **row);
 
 void dictDestroy(tDict *dict);
 
-int parseGif(tGif *gif, unsigned char *buffer);
+void dictResize(tDict *dict, uint16_t size);
 
-int checkHeader(unsigned char *buffer);
+int parseGif(tGif *gif, uint8_t *buffer);
 
-void getGifLsd(tGifLsd *lsd, unsigned char *buffer);
+int checkHeader(uint8_t *buffer);
+
+void getGifLsd(tGifLsd *lsd, uint8_t *buffer);
 
 uint16_t getColorTableSize(uint8_t pf);
 
-void getColorTable(tColor **ct, uint16_t size, unsigned char *buffer);
+void getColorTable(tColor **ct, uint16_t size, uint8_t *buffer);
 
 void printColorTable(tColor *ct, uint16_t size);
 
-int isGce(unsigned char *buffer);
+int isGce(uint8_t *buffer);
 
-void getGce(tGifGce *gce, unsigned char *buffer);
+void getGce(tGifGce *gce, uint8_t *buffer);
 
-int isImgDesc(unsigned char *buffer);
+int isImgDesc(uint8_t *buffer);
 
-void getImgDesc(tGifImgDesc *id, unsigned char *buffer);
+void getImgDesc(tGifImgDesc *id, uint8_t *buffer);
 
 void getImgInfo(tGifImgInfo *info, uint8_t pf);
 
-void decodeLzwData(tGifImg *img, unsigned char *buffer);
+void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out);
+
+uint16_t getCode(uint8_t **buffer, uint8_t codeSize);
+
+tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k);
 
 void freeGif(tGif *gif);
 #endif
