@@ -10,6 +10,7 @@ int gif2bmp(tGIF2BMP *gif2bmp, FILE *inputFile, FILE *outputFile) {
     uint8_t *buffer = NULL;
     uint8_t *bufferStart = NULL;
     tGif gif;
+    tBmp bmp;
 
     loadFileToBuffer(&buffer, inputFile, gif2bmp->gifSize);
     bufferStart = buffer;
@@ -22,13 +23,16 @@ int gif2bmp(tGIF2BMP *gif2bmp, FILE *inputFile, FILE *outputFile) {
     buffer = bufferStart;
 
     if (0 != parseGif(&gif, buffer)) {
-        printf("ERROR bitch\n\n");
+        fprintf(stderr, "Error parsing gif file\n");
         free(bufferStart);
         return 1;
     }
 
+    initBmp(&bmp, &gif);
+    writeBmpToFile(outputFile, &bmp);
 
     freeGif(&gif);
+    freeBmp(&bmp);
     free(bufferStart);
 
     return 0;
@@ -110,19 +114,13 @@ void dictInit(tDict *dict, uint16_t size) {
     }
 
     dict->size = size;
-    dict->insertIndex = (size / 2) + 1;
+    dict->insertIndex = (size / 2) + 2;
 }
 
 void dictInsert(tDict *dict, tDictRow *row) {
-    if (dict == NULL) {
+    if (dict == NULL || row == NULL) {
         return;
     }
-    //printf("debug row size %d\n", row->size);
-    //printf("debug row indexes\n");
-    //for (int i = 0; i < row->size; ++i) {
-    //    printf("%02x ", *(row->colorIndexes + i));
-    //}
-    //printf("\n");
     if (dict->insertIndex < dict->size) {
         ((dict->rows)[dict->insertIndex]) = row;
         ++(dict->insertIndex);
@@ -133,13 +131,7 @@ void dictSearch(tDict *dict, uint16_t index, tDictRow **row) {
     if (dict == NULL || index > dict->size) {
         return;
     }
-    if ((dict->rows)[index] != NULL) {
-        *row = ((dict->rows)[index]);
-        return;
-    } else {
-        *row = NULL;
-        return;
-    }
+    *row = ((dict->rows)[index]);
 }
 
 void dictDestroy(tDict *dict) {
@@ -170,11 +162,12 @@ void dictResize(tDict *dict, uint16_t size) {
 
 int parseGif(tGif *gif, uint8_t *buffer) {
     tGifLsd lsd;
+    tColor *tablePtr = NULL;
     tGifGce gce;
     tGifGce *gceArrPtr = NULL;
     tGifImg img;
     tGifImg *imgPtr = NULL;
-    uint8_t *colorIndexes = NULL;
+    uint32_t imgSize = 0;
 
     memset(gif, 0, sizeof(tGif));
     // Parse header.
@@ -187,7 +180,7 @@ int parseGif(tGif *gif, uint8_t *buffer) {
 
     // Parse logical screen descriptor.
     getGifLsd(&lsd, buffer);
-    buffer += sizeof(tGifLsd);
+    buffer += sizeof(tGifLsd) - 1;
     (gif->info).isGlobalTable = lsd.packedField & GIF_GCT_FLAG;
     (gif->info).isSort = lsd.packedField & GIF_SORT_FLAG;
     gif->lsd = lsd;
@@ -195,9 +188,10 @@ int parseGif(tGif *gif, uint8_t *buffer) {
     // Parse global color table.
     if ((gif->info).isGlobalTable > 0) {
         (gif->info).globalTableSize = getColorTableSize(lsd.packedField);
-        getColorTable(&(gif->globalColorTable), (gif->info).globalTableSize,
+        getColorTable(&(tablePtr), (gif->info).globalTableSize,
                 buffer);
-        buffer += (gif->info).globalTableSize * sizeof(tColor) - 1;
+        gif->globalColorTable = tablePtr;
+        buffer += (gif->info).globalTableSize * sizeof(tColor);
     }
 
     // Parse graphics control extensions.
@@ -213,7 +207,7 @@ int parseGif(tGif *gif, uint8_t *buffer) {
         buffer += sizeof(tGifGce);
     }
 
-    // Parse image descriptors.
+    // Parse image descriptors and image data.
     while (isImgDesc(buffer)) {
         ++buffer;
         ++((gif->info).imgCount);
@@ -230,12 +224,16 @@ int parseGif(tGif *gif, uint8_t *buffer) {
                     buffer);
             buffer += img.info.localTableSize * sizeof(tColor) - 1;
         }
-        decodeLzwData(&img, buffer, &colorIndexes);
+        imgSize = (img.desc).width * (img.desc).height;
+        printf("debug size %d\n", imgSize);
+        gif->colorIndexes = malloc(imgSize);
+        memset(gif->colorIndexes, 0, imgSize);
+        gif->colorIndexesSize += imgSize;
+
+        decodeLzwData(&img, buffer, &(gif->colorIndexes));
         printf("debug buffer parse %02x\n", *buffer);
+        memcpy(gif->images, &img, sizeof(tGifImg));
     }
-
-    free(colorIndexes);
-
 
     return 0;
 }
@@ -259,7 +257,6 @@ void getGifLsd(tGifLsd *lsd, uint8_t *buffer) {
     memcpy(&(lsd->bgColorIndex), buffer, sizeof(uint8_t));
     ++buffer;
     memcpy(&(lsd->pixelAspectRatio), buffer, sizeof(uint8_t));
-    ++buffer;
 }
 
 uint16_t getColorTableSize(uint8_t pf) {
@@ -276,14 +273,14 @@ void getColorTable(tColor **ct, uint16_t size, uint8_t *buffer) {
 
     *ct = malloc(size * sizeof(tColor));
     ctStart = *ct;
-    for (; size > 0; --size) {
+    while(size-- > 0) {
         c.red = *buffer;
         ++buffer;
         c.green = *buffer;
         ++buffer;
         c.blue = *buffer;
         ++buffer;
-        memcpy(*ct, &c, sizeof(tColor));
+        **ct = c;
         ++(*ct);
     }
 
@@ -355,18 +352,15 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
     tDict dict;
     tDictRow *row = NULL;
     tDictRow *prevRow = NULL;
-    uint8_t *outStart = NULL;
     uint8_t k = 0;
     uint16_t code = 0;
-    uint8_t blockSize = 0;
+    uint16_t prevCode = 0;
+    uint16_t blockSize = 0;
     uint16_t clearCode = 0;
     uint16_t endCode = 0;
     uint8_t codeSize = 0;
     uint8_t *bufferStart = NULL;
-
-    *out = malloc((img->desc).width * (img->desc).height);
-    memset(*out, 0, (img->desc).width * (img->desc).height);
-    outStart = *out;
+    uint8_t *outStart = *out;
 
     codeSize = *buffer + 1;
     ++buffer; // Code size.
@@ -384,22 +378,20 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
     // Loop over blocks.
     while(blockSize != 0) {
         bufferStart = buffer;
-        while ((buffer - bufferStart) < blockSize + 2) {
+        while ((buffer - bufferStart) < blockSize) {
             code = getCode(&buffer, codeSize);
             if (code == clearCode) {
             printf("debug CLEAR &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
                 // Reinitialize the dictionary.
                 dictDestroy(&dict);
                 dictInit(&dict, 1 << codeSize);
-                // Get first code and look it up in the dictionary, it should always
-                // be there.
                 code = getCode(&buffer, codeSize);
+                    printf("debug first CODE %04x\n", code);
                 dictSearch(&dict, code, &row);
                 if (row != NULL) {
                     memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
                     *(out) += row->size;
                 }
-                prevRow = row;
             } else if (code == endCode) {
                     printf("debug END CODE ****************************\n");
                 code = 0;
@@ -412,34 +404,37 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
                     memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
                     k = **out; // First color index from current row.
                     *(out) += row->size;
-                    dictInsert(&dict, createRowToAdd(row, k));
-                    prevRow = row;
-                    printf("debug FOUND\n");
+                    dictSearch(&dict, prevCode, &prevRow);
+                    dictInsert(&dict, createRowToAdd(prevRow, k));
                 } else {
+                    dictSearch(&dict, prevCode, &prevRow);
                     k = *(prevRow->colorIndexes);
                     memcpy(*out, prevRow->colorIndexes, prevRow->size * sizeof(uint8_t));
-                    memcpy(*out, &k, sizeof(uint8_t));
                     *(out) += prevRow->size;
-                    prevRow = createRowToAdd(prevRow, k);
-                    dictInsert(&dict, prevRow);
-                    printf("debug NOT FOUND\n");
+                    memcpy(*out, &k, sizeof(uint8_t));
+                    *(out) += 1;
+                    dictInsert(&dict, createRowToAdd(prevRow, k));
                 }
+                    printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
             }
-            if (dict.insertIndex > (1 << codeSize)
-                    && codeSize <= LZW_MAX_CODE_SIZE) {
+            if (dict.insertIndex >= (1 << codeSize)
+                    && codeSize < LZW_MAX_CODE_SIZE) {
                 printf("debug RESIZE++++++++++++++++++++++++++++++++++++++\n");
                 ++codeSize;
                 dictResize(&dict, (1 << codeSize));
             }
-            printf("debug buf shift %02x\n", (uint8_t)(buffer - bufferStart));
+            prevCode = code;
+            printf("debug dict index %d\n", dict.insertIndex);
         }
-        blockSize = code;
-                    printf("debug END CODE %04x ---------------------------\n", code);
+        blockSize = *buffer;
+                    printf("debug END BLOCKSIZE %04x ---------------------------\n", blockSize);
+                    printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
+        ++buffer;
     }
     dictDestroy(&dict);
 
         printf("\nOUT\n");
-                for (int j = 0; j < 25; ++j) {
+                for (int j = 0; j < (img->desc).width * (img->desc).height; ++j) {
                     printf("%02x ", *(outStart + j));
                 }
         printf("\nOUT\n");
@@ -502,7 +497,105 @@ tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k) {
 }
 
 void freeGif(tGif *gif) {
-    free(gif->images);
     free(gif->globalColorTable);
     free(gif->gceArr);
+    free(gif->images);
+    free(gif->colorIndexes);
+}
+
+void initBmp(tBmp *bmp, tGif *gif) {
+    uint8_t *data = NULL;
+    uint8_t *dataStart = NULL;
+    uint16_t bmpDataSize = 0;
+
+    initBmpHeader(&(bmp->header));
+    initBmpDibHeader(&(bmp->dib), (gif->lsd).width, (gif->lsd).height);
+
+    bmpDataSize = gif->colorIndexesSize * sizeof(tColor);
+    (bmp->header).size += bmpDataSize;
+    (bmp->dib).sizeImage = bmpDataSize;
+
+    data = malloc(bmpDataSize);
+    memset(data, 0, bmpDataSize);
+    dataStart = data;
+    bmp->data = malloc(bmpDataSize);
+    memset(bmp->data, 0, bmpDataSize);
+    for (uint16_t i = 0; i < gif->colorIndexesSize; ++i) {
+        *data = ((gif->globalColorTable)[i]).red;
+        ++data;
+        *data = ((gif->globalColorTable)[i]).green;
+        ++data;
+        *data = ((gif->globalColorTable)[i]).blue;
+        ++data;
+    }
+
+    memcpy(bmp->data, dataStart, bmpDataSize);
+    free(dataStart);
+}
+
+void initBmpHeader(tBmpHeader *hdr) {
+    hdr->fileType = BMP_HEADER_TYPE;
+    hdr->size = sizeof(tBmpHeader) + sizeof(tBmpDib);
+    hdr->reserved1 = 0;
+    hdr->reserved2 = 0;
+    hdr->dataOffset = BMP_DATA_OFFSET;
+}
+
+void initBmpDibHeader(tBmpDib *dib, uint32_t width,
+        uint32_t height) {
+    dib->headerSize = sizeof(tBmpDib);
+    dib->width = width;
+    dib->height = height;
+    dib->planes = BMP_PLANES;
+    dib->bitCount = BMP_BITCOUNT;
+    dib->compression = BMP_COMPRESS_METHOD;
+    dib->hResolution = BMP_HRES;
+    dib->vResolution = BMP_VRES;
+    dib->colorsUsed = BMP_COLORS_USED;
+    dib->significantColors = BMP_SIG_COLORS;
+}
+
+void freeBmp(tBmp *bmp) {
+    free(bmp->data);
+}
+
+void writeBmpToFile(FILE *fp, tBmp *bmp) {
+    uint16_t word = 0;
+    uint32_t dWord = 0;
+
+    word = (bmp->header).fileType;
+    fwrite(&word, sizeof(uint16_t), 1, fp);
+    dWord = (bmp->header).size;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    word = (bmp->header).reserved1;
+    fwrite(&word, sizeof(uint16_t), 1, fp);
+    word = (bmp->header).reserved2;
+    fwrite(&word, sizeof(uint16_t), 1, fp);
+    dWord = (bmp->header).dataOffset;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+
+    dWord = (bmp->dib).headerSize;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).width;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).height;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    word = (bmp->dib).planes;
+    fwrite(&word, sizeof(uint16_t), 1, fp);
+    word = (bmp->dib).bitCount;
+    fwrite(&word, sizeof(uint16_t), 1, fp);
+    dWord = (bmp->dib).compression;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).sizeImage;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).hResolution;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).vResolution;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).colorsUsed;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+    dWord = (bmp->dib).significantColors;
+    fwrite(&dWord, sizeof(uint32_t), 1, fp);
+
+    fwrite(bmp->data, sizeof(uint8_t), (bmp->dib).sizeImage, fp);
 }
