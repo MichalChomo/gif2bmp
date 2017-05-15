@@ -2,7 +2,7 @@
 // Login: xchomo01
 //  Date: 5.5.2017
 //
-//  Header file with constants, data structures and function definitions.
+//  Header file with constants, data structures and function declarations.
 
 #ifndef GIF2BMP_H
 #define GIF2BMP_H
