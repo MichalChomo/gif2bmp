@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <getopt.h>
+#include "dictionary.h"
 
 #define LOGIN "xchomo01"
 
@@ -110,17 +111,6 @@ typedef struct {
 }tGif;
 
 typedef struct {
-    uint8_t  *colorIndexes;
-    uint8_t   size;
-}tDictRow;
-
-typedef struct {
-    tDictRow **rows;
-    uint16_t   size;
-    uint16_t   insertIndex;
-}tDict;
-
-typedef struct {
     uint16_t fileType;
     uint32_t size;
     uint16_t reserved1;
@@ -174,16 +164,6 @@ int createLogfile(char *fileName, tGIF2BMP *g2b);
  * @return Size of the file.
  */
 int64_t getFileSize(const char *fileName);
-
-void dictInit(tDict *dict, uint16_t size);
-
-void dictInsert(tDict *dict, tDictRow *row);
-
-void dictSearch(tDict *dict, uint16_t index, tDictRow **row);
-
-void dictDestroy(tDict *dict);
-
-void dictResize(tDict *dict, uint16_t size);
 
 int parseGif(tGif *gif, uint8_t *buffer);
 
