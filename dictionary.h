@@ -1,9 +1,7 @@
 #ifndef DICTIONARY_H
 #define DICTIONARY_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include "gif2bmp.h"
 
 typedef struct {
     uint8_t  *colorIndexes;
