@@ -221,24 +221,24 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
         while ((buffer - bufferStart) < blockSize) {
             code = getCode(&buffer, codeSize);
             if (code == clearCode) {
-            printf("debug CLEAR &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
+            //printf("debug CLEAR &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
                 // Reinitialize the dictionary.
                 dictDestroy(&dict);
                 dictInit(&dict, 1 << codeSize);
                 code = getCode(&buffer, codeSize);
-                    printf("debug first CODE %04x\n", code);
+                    //printf("debug first CODE %04x\n", code);
                 dictSearch(&dict, code, &row);
                 if (row != NULL) {
                     memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
                     *(out) += row->size;
                 }
             } else if (code == endCode) {
-                    printf("debug END CODE ****************************\n");
+                    //printf("debug END CODE ****************************\n");
                 code = 0;
                 break;
             } else {
                 // Lookup the code in the dictionary.
-                    printf("debug CODE %04x\n", code);
+                    //printf("debug CODE %04x\n", code);
                 dictSearch(&dict, code, &row);
                 if (row != NULL) {
                     memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
@@ -255,7 +255,7 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
                     *(out) += 1;
                     dictInsert(&dict, createRowToAdd(prevRow, k));
                 }
-                    printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
+                    //printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
             }
             if (dict.insertIndex >= (1 << codeSize)
                     && codeSize < LZW_MAX_CODE_SIZE) {
@@ -264,20 +264,20 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
                 dictResize(&dict, (1 << codeSize));
             }
             prevCode = code;
-            printf("debug dict index %d\n", dict.insertIndex);
+            //printf("debug dict index %d\n", dict.insertIndex);
         }
         blockSize = *buffer;
-                    printf("debug END BLOCKSIZE %04x ---------------------------\n", blockSize);
-                    printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
+                    //printf("debug END BLOCKSIZE %04x ---------------------------\n", blockSize);
+                    //printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
         ++buffer;
     }
     dictDestroy(&dict);
 
-        printf("\nOUT\n");
-                for (int j = 0; j < (img->desc).width * (img->desc).height; ++j) {
-                    printf("%02x ", *(outStart + j));
-                }
-        printf("\nOUT\n");
+        //printf("\nOUT\n");
+        //        for (int j = 0; j < (img->desc).width * (img->desc).height; ++j) {
+        //            printf("%02x ", *(outStart + j));
+        //        }
+        //printf("\nOUT\n");
     *out = outStart;
 }
 

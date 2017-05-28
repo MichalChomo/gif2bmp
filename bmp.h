@@ -9,8 +9,8 @@
 #define BMP_BITCOUNT 0x18
 #define BMP_PLANES 1
 #define BMP_COMPRESS_METHOD 0
-#define BMP_HRES 0x0b13
-#define BMP_VRES 0x0b13
+#define BMP_HRES 0
+#define BMP_VRES 0
 #define BMP_COLORS_USED 0
 #define BMP_SIG_COLORS 0
 

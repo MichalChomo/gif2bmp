@@ -1,33 +1,32 @@
 #include "bmp.h"
 
 void initBmp(tBmp *bmp, tGif *gif) {
-    uint8_t *data = NULL;
+    uint8_t *colorIndexesPtr = NULL;
     uint8_t *dataStart = NULL;
     uint16_t bmpDataSize = 0;
 
     initBmpHeader(&(bmp->header));
-    initBmpDibHeader(&(bmp->dib), (gif->lsd).width, (gif->lsd).height);
+    initBmpDibHeader(&(bmp->dib), (gif->lsd).width, -(gif->lsd).height);
 
     bmpDataSize = gif->colorIndexesSize * sizeof(tColor);
     (bmp->header).size += bmpDataSize;
     (bmp->dib).sizeImage = bmpDataSize;
 
-    data = malloc(bmpDataSize);
-    memset(data, 0, bmpDataSize);
-    dataStart = data;
     bmp->data = malloc(bmpDataSize);
     memset(bmp->data, 0, bmpDataSize);
+    dataStart = bmp->data;
+    colorIndexesPtr = gif->colorIndexes;
     for (uint16_t i = 0; i < gif->colorIndexesSize; ++i) {
-        *data = ((gif->globalColorTable)[i]).red;
-        ++data;
-        *data = ((gif->globalColorTable)[i]).green;
-        ++data;
-        *data = ((gif->globalColorTable)[i]).blue;
-        ++data;
+        *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).blue;
+        ++(bmp->data);
+        *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).green;
+        ++(bmp->data);
+        *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).red;
+        ++(bmp->data);
+        ++colorIndexesPtr;
     }
 
-    memcpy(bmp->data, dataStart, bmpDataSize);
-    free(dataStart);
+    bmp->data = dataStart;
 }
 
 void initBmpHeader(tBmpHeader *hdr) {
