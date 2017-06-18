@@ -4,11 +4,14 @@ void initBmp(tBmp *bmp, tGif *gif) {
     uint8_t *colorIndexesPtr = NULL;
     uint8_t *dataStart = NULL;
     uint16_t bmpDataSize = 0;
+    uint8_t padding = (4 - ((gif->lsd).width * sizeof(tColor))) % 4;
 
     initBmpHeader(&(bmp->header));
     initBmpDibHeader(&(bmp->dib), (gif->lsd).width, -(gif->lsd).height);
 
-    bmpDataSize = gif->colorIndexesSize * sizeof(tColor);
+    // Allocate memory, include padding.
+    bmpDataSize = gif->colorIndexesSize * sizeof(tColor)
+            + padding * (gif->lsd).height;
     (bmp->header).size += bmpDataSize;
     (bmp->dib).sizeImage = bmpDataSize;
 
@@ -16,16 +19,18 @@ void initBmp(tBmp *bmp, tGif *gif) {
     memset(bmp->data, 0, bmpDataSize);
     dataStart = bmp->data;
     colorIndexesPtr = gif->colorIndexes;
-    for (uint16_t i = 0; i < gif->colorIndexesSize; ++i) {
-        *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).blue;
-        ++(bmp->data);
-        *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).green;
-        ++(bmp->data);
-        *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).red;
-        ++(bmp->data);
-        ++colorIndexesPtr;
+    for (uint16_t i = 0; i < (gif->lsd).height; ++i) {
+        for (uint16_t j = 0; j < (gif->lsd).width; ++j) {
+            *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).blue;
+            ++(bmp->data);
+            *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).green;
+            ++(bmp->data);
+            *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).red;
+            ++(bmp->data);
+            ++colorIndexesPtr;
+        }
+        bmp->data += padding;
     }
-
     bmp->data = dataStart;
 }
 
