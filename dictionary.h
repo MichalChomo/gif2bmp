@@ -24,4 +24,6 @@ void dictDestroy(tDict *dict);
 
 void dictResize(tDict *dict, uint16_t size);
 
+void dictReinit(tDict *dict, uint16_t index);
+
 #endif

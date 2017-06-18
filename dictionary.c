@@ -26,6 +26,9 @@ void dictInsert(tDict *dict, tDictRow *row) {
         return;
     }
     if (dict->insertIndex < dict->size) {
+        if (((dict->rows)[dict->insertIndex]) != NULL) {
+            free(((dict->rows)[dict->insertIndex]));
+        }
         ((dict->rows)[dict->insertIndex]) = row;
         ++(dict->insertIndex);
     }
@@ -64,3 +67,6 @@ void dictResize(tDict *dict, uint16_t size) {
     dict->size = size;
 }
 
+void dictReinit(tDict *dict, uint16_t index) {
+    dict->insertIndex = index;
+}
