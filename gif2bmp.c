@@ -18,11 +18,11 @@ int gif2bmp(tGIF2BMP *gif2bmp, FILE *inputFile, FILE *outputFile) {
     loadFileToBuffer(&buffer, inputFile, gif2bmp->gifSize);
     bufferStart = buffer;
 
-//    for (int i = 0; i < gif2bmp->gifSize - 1; ++i) {
-//        printf("%02x ", *buffer);
-//        ++buffer;
-//    }
-//        printf("%02x ", *buffer);
+    for (int i = 0; i < gif2bmp->gifSize - 1; ++i) {
+        printf("%02x ", *buffer);
+        ++buffer;
+    }
+        printf("%02x ", *buffer);
     buffer = bufferStart;
 
     if (0 != parseGif(&gif, buffer)) {

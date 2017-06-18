@@ -7,7 +7,8 @@
 #define GIF_HEADER_SIZE 6
 #define GIF_HEADER_89 "GIF89a"
 #define GIF_HEADER_87 "GIF87a"
-#define GIF_EXT_SEPARATOR 0xf921
+#define GIF_GC_EXT_SEPARATOR 0xf921
+#define GIF_APP_EXT_SEPARATOR 0xff21
 #define GIF_IMG_SEPARATOR 0x2c
 #define GIF_TERMINATOR 0x3b
 #define GIF_GCT_FLAG 0x80
@@ -92,6 +93,8 @@ void printColorTable(tColor *ct, uint16_t size);
 int isGce(uint8_t *buffer);
 
 void getGce(tGifGce *gce, uint8_t *buffer);
+
+void ignoreAppExt(uint8_t **buffer);
 
 int isImgDesc(uint8_t *buffer);
 
