@@ -37,6 +37,7 @@ int gif2bmp(tGIF2BMP *gif2bmp, FILE *inputFile, FILE *outputFile) {
     freeGif(&gif);
     freeBmp(&bmp);
     free(bufferStart);
+    fclose(outputFile);
 
     return 0;
 }

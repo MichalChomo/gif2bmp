@@ -16,4 +16,4 @@ $(APP): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -rf *.o $(APP)
+	rm -rf *.o $(APP) *.log

@@ -89,15 +89,15 @@ int main(int argc, char *argv[]) {
     }
 
     if (logfile != NULL) {
+        g2b.bmpSize = getFileSize(ofile);
         if (0 != createLogfile(logfile, &g2b)) {
             fprintf(stderr, "Cannot create logfile.\n");
-            cleanup(ifile, ofile, logfile, ifp, ofp);
+            cleanup(ifile, ofile, logfile, ifp, NULL);
             return 1;
         }
-        free(logfile);
     }
 
-    cleanup(ifile, ofile, logfile, ifp, ofp);
+    cleanup(ifile, ofile, logfile, ifp, NULL);
 
     return 0;
 }
