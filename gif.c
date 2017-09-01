@@ -231,8 +231,9 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
     ++buffer; // Code size.
     if (codeSize < 4) {
         codeSize = 4; // 4 is minimum LZW code size.
+    } else {
+        ++codeSize; // Increment because of clear code and EOI code.
     }
-    ++codeSize; // Increment because of clear code and EOI code.
         printf("debug code size %02x\n", codeSize);
     origCodeSize = codeSize;
     clearCode = 1 << (codeSize - 1);
