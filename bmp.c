@@ -3,7 +3,9 @@
 void initBmp(tBmp *bmp, tGif *gif) {
     uint8_t *colorIndexesPtr = NULL;
     uint8_t *dataStart = NULL;
-    uint16_t bmpDataSize = 0;
+    uint32_t bmpDataSize = 0;
+    // tColor is 3 bytes, so if width * 3 is not a multiple of 4, padding has
+    // to be added so the bmp data is aligned to multiple of 4.
     uint8_t padding = (4 - ((gif->lsd).width * sizeof(tColor))) % 4;
 
     initBmpHeader(&(bmp->header));
