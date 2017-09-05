@@ -35,8 +35,8 @@ int main(int argc, char *argv[]) {
     char *logfile = NULL;
     int c = 0;
     tGIF2BMP g2b;
-    FILE *ifp;
-    FILE *ofp;
+    FILE *ifp = NULL;
+    FILE *ofp = NULL;
 
     while (-1 != (c = getopt(argc, argv, "i:o:l:h"))) {
         switch (c) {
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     if (ifile != NULL) {
         ifp = fopen(ifile, "r");
         if (ifp == NULL) {
-            fprintf(stderr, "Cannot open ipnut file %s.\n", ifile);
+            fprintf(stderr, "Cannot open input file %s.\n", ifile);
             cleanup(ifile, ofile, logfile, ifp, ofp);
             return 1;
         }

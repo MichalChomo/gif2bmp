@@ -13,9 +13,9 @@
 #define GIF_TERMINATOR 0x3b
 #define GIF_GCT_FLAG 0x80
 #define GIF_SORT_FLAG 0x08
-#define GIF_IMG_LCT_FLAG 0x08
-#define GIF_IMG_INTERLACE_FLAG 0x04
-#define GIF_IMG_SORT_FLAG 0x02
+#define GIF_IMG_LCT_FLAG 0x80
+#define GIF_IMG_INTERLACE_FLAG 0x40
+#define GIF_IMG_SORT_FLAG 0x20
 
 typedef struct {
     uint16_t width;
@@ -109,5 +109,7 @@ uint16_t getCode(uint8_t **buffer, uint8_t codeSize);
 tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k);
 
 void freeGif(tGif *gif);
+
+void copyRow(tDictRow *dest, tDictRow *src);
 
 #endif

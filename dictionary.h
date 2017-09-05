@@ -26,4 +26,6 @@ void dictResize(tDict *dict, uint16_t size);
 
 void dictReinit(tDict *dict, uint16_t index);
 
+void freeRowAndColorIndexes(tDictRow *row);
+
 #endif

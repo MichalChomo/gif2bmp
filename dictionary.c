@@ -10,11 +10,11 @@ void dictInit(tDict *dict, uint16_t size) {
     for (; i < size / 2; ++i) {
         row.colorIndexes = malloc(sizeof(uint8_t));
         *(row.colorIndexes) = i;
-        ((dict->rows)[i]) = malloc(sizeof(tDictRow));
+        (dict->rows)[i] = malloc(sizeof(tDictRow));
         *((dict->rows)[i]) = row;
     }
     for (; i < size; ++i) {
-        ((dict->rows)[i]) = NULL;
+        (dict->rows)[i] = NULL;
     }
 
     dict->size = size;
@@ -26,10 +26,8 @@ void dictInsert(tDict *dict, tDictRow *row) {
         return;
     }
     if (dict->insertIndex < dict->size) {
-        if (((dict->rows)[dict->insertIndex]) != NULL) {
-            free(((dict->rows)[dict->insertIndex]));
-        }
-        ((dict->rows)[dict->insertIndex]) = row;
+        freeRowAndColorIndexes((dict->rows)[dict->insertIndex]);
+        (dict->rows)[dict->insertIndex] = row;
         ++(dict->insertIndex);
     }
 }
@@ -38,35 +36,52 @@ void dictSearch(tDict *dict, uint16_t index, tDictRow **row) {
     if (dict == NULL || index > dict->size) {
         return;
     }
-    *row = ((dict->rows)[index]);
+    *row = (dict->rows)[index];
 }
 
 void dictDestroy(tDict *dict) {
+    tDictRow *row;
+
     if (dict == NULL) {
         return;
     }
-    tDictRow *row;
-
     for (uint16_t i = 0; i < dict->size; ++i) {
-        row = (dict->rows)[i];
-        if (row != NULL) {
-            if (row->colorIndexes != NULL) {
-                free(row->colorIndexes);
-            }
-            free(row);
-        }
+        freeRowAndColorIndexes((dict->rows)[i]); 
     }
     free(dict->rows);
 }
 
 void dictResize(tDict *dict, uint16_t size) {
-    dict->rows = realloc(dict->rows, size * sizeof(tDictRow *));
-    for (uint16_t i = size / 2; i < size; ++i) {
-        ((dict->rows)[i]) = NULL;
+    tDictRow **tmpRows;
+
+    // When the dictionary is shrinking, free the old content.
+    if (size <= dict->size) {
+        for (uint16_t i = size / 2; i < dict->size; ++i) {
+            freeRowAndColorIndexes((dict->rows)[i]); 
+        }
     }
-    dict->size = size;
+    tmpRows = realloc(dict->rows, size * sizeof(tDictRow *));
+    if (tmpRows == NULL) {
+        fprintf(stderr, "realloc failed while resizing dictionary.\n");
+    } else {
+        dict->rows = tmpRows;
+        for (uint16_t i = size / 2; i < size; ++i) {
+            (dict->rows)[i] = NULL; 
+        }
+        dict->size = size;
+    }
 }
 
 void dictReinit(tDict *dict, uint16_t index) {
     dict->insertIndex = index;
+}
+
+void freeRowAndColorIndexes(tDictRow *row) {
+    if (row != NULL) {
+        if (row->colorIndexes != NULL) {
+            free(row->colorIndexes);
+        }
+        free(row);
+        row = NULL;
+    }
 }
