@@ -1,8 +1,9 @@
 #include "bmp.h"
 
 void initBmp(tBmp *bmp, tGif *gif) {
-    uint8_t *colorIndexesPtr = NULL;
     uint8_t *dataStart = NULL;
+    uint8_t *colorIndexesPtr = NULL;
+    tColor *colorTable = NULL;
     uint32_t bmpDataSize = 0;
     // tColor is 3 bytes, so if width * 3 is not a multiple of 4, padding has
     // to be added so the bmp data is aligned to multiple of 4.
@@ -11,7 +12,7 @@ void initBmp(tBmp *bmp, tGif *gif) {
     initBmpHeader(&(bmp->header));
     initBmpDibHeader(&(bmp->dib), (gif->lsd).width, -(gif->lsd).height);
 
-    // Allocate memory, include padding.
+    // Compute the data size, include padding.
     bmpDataSize = gif->colorIndexesSize * sizeof(tColor)
             + padding * (gif->lsd).height;
     (bmp->header).size += bmpDataSize;
@@ -21,19 +22,34 @@ void initBmp(tBmp *bmp, tGif *gif) {
     memset(bmp->data, 0, bmpDataSize);
     dataStart = bmp->data;
     colorIndexesPtr = gif->colorIndexes;
-    for (uint16_t i = 0; i < (gif->lsd).height; ++i) {
-        for (uint16_t j = 0; j < (gif->lsd).width; ++j) {
-            *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).blue;
-            ++(bmp->data);
-            *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).green;
-            ++(bmp->data);
-            *(bmp->data) = ((gif->globalColorTable)[*colorIndexesPtr]).red;
-            ++(bmp->data);
-            ++colorIndexesPtr;
+    for (uint8_t i = 0; i < (gif->info).imgCount; ++i) {
+        if ((gif->images)[i].info.isLocalTable > 0) {
+            colorTable = (gif->images)[i].localColorTable;
+        } else if ((gif->info).isGlobalTable > 0) {
+            colorTable = gif->globalColorTable;
+        } else {
+            // This shouldn't happen.
         }
-        bmp->data += padding;
+        fillBmpData(&(bmp->data), colorTable, &colorIndexesPtr,
+                (gif->images)[i].desc.height, (gif->images)[i].desc.width,
+                padding);
     }
     bmp->data = dataStart;
+}
+
+void fillBmpData(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes, uint16_t height, uint16_t width, uint8_t padding) {
+    for (uint16_t i = 0; i < height; ++i) {
+        for (uint16_t j = 0; j < width; ++j) {
+            **bmpData = (colorTable[**colorIndexes]).blue;
+            ++(*bmpData);
+            **bmpData = (colorTable[**colorIndexes]).green;
+            ++(*bmpData);
+            **bmpData = (colorTable[**colorIndexes]).red;
+            ++(*bmpData);
+            ++(*colorIndexes);
+        }
+        *bmpData += padding;
+    }
 }
 
 void initBmpHeader(tBmpHeader *hdr) {

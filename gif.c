@@ -66,7 +66,7 @@ int parseGif(tGif *gif, uint8_t *buffer) {
             img.info.localTableSize = getColorTableSize(img.desc.packedField);
             getColorTable(&(img.localColorTable), img.info.localTableSize,
                     buffer);
-            buffer += img.info.localTableSize * sizeof(tColor) - 1;
+            buffer += img.info.localTableSize * sizeof(tColor);
         }
         imgSize = (img.desc).width * (img.desc).height;
         gif->colorIndexes = malloc(imgSize);
@@ -370,9 +370,16 @@ tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k) {
 }
 
 void freeGif(tGif *gif) {
-    free(gif->globalColorTable);
-    free(gif->gceArr);
+    if ((gif->info).isGlobalTable > 0) {
+        free(gif->globalColorTable);
+    }
+    for (int i = 0; i < (gif->info).imgCount; ++i) {
+        if ((gif->images)[i].info.isLocalTable > 0) {
+            free((gif->images)[i].localColorTable);
+        }
+    }
     free(gif->images);
+    free(gif->gceArr);
     free(gif->colorIndexes);
 }
 

@@ -53,4 +53,6 @@ void freeBmp(tBmp *bmp);
 
 void writeBmpToFile(FILE *fp, tBmp *bmp);
 
+void fillBmpData(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes, uint16_t height, uint16_t width, uint8_t padding);
+
 #endif
