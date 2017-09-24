@@ -325,6 +325,13 @@ uint16_t getCode(uint8_t **buffer, uint8_t codeSize) {
     uint16_t mask = (1 << codeSize) - 1;
     uint16_t code = 0;
 
+    // For testing, there's no other way to reinit static variables.
+    if (codeSize == 255) {
+        word = 0;
+        bitsRead = 0;
+        return 0;
+    }
+
     if (bitsRead == 0) {
         memcpy(&word, *buffer, sizeof(uint16_t));
         *(buffer) += 2;
