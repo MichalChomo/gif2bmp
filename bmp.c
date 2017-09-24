@@ -29,6 +29,7 @@ void initBmp(tBmp *bmp, tGif *gif) {
             colorTable = gif->globalColorTable;
         } else {
             // This shouldn't happen.
+            printf("debug initBmp loop over images, no table\n");
         }
         fillBmpData(&(bmp->data), colorTable, &colorIndexesPtr,
                 (gif->images)[i].desc.height, (gif->images)[i].desc.width,

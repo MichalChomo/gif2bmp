@@ -248,6 +248,7 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
     // Loop over blocks.
     while (blockSize != 0) {
         bufferStart = buffer;
+            printf("debug blockSize %02x\n", blockSize);
         while ((buffer - bufferStart) < blockSize) {
             code = getCode(&buffer, codeSize);
             if (code == clearCode) {
@@ -259,7 +260,6 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
             printf("debug first CODE %04x\n", code);
                 dictSearch(&dict, code, &row);
                 if (row != NULL) {
-            printf("debug row not null\n");
                     memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
                     *out += row->size;
                     copyRow(&prevRow, row);
@@ -267,8 +267,8 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
             } else if (code == endCode) {
                     printf("debug END CODE ****************************\n");
                 code = 0;
-                dictDestroy(&dict); 
                 free(prevRow.colorIndexes);
+                dictDestroy(&dict); 
                 return;
             } else {
                 // Lookup the code in the dictionary.
@@ -294,14 +294,18 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
                     //printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
             }
             if (dict.insertIndex >= (1 << codeSize) && codeSize < LZW_MAX_CODE_SIZE) {
+                //printf("debug buff diff %ld\n", (buffer - bufferStart));
                 printf("debug RESIZE codeSize %d++++++++++++++++++++++++++++++++++++++\n", codeSize);
                 ++codeSize;
                 dictResize(&dict, (1 << codeSize));
             }
         }
+        if ((buffer - bufferStart) > blockSize) {
+            --buffer;
+        }
         blockSize = *buffer;
-                    //printf("debug END BLOCKSIZE %04x ---------------------------\n", blockSize);
-                    //printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
+
+                //printf("debug buffer after block %02x %02x %02x ---------------------------\n", *(buffer - 1),*(buffer + 0),*(buffer + 1));
         ++buffer;
     }
     free(prevRow.colorIndexes);

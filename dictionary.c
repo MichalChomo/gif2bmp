@@ -29,6 +29,10 @@ void dictInsert(tDict *dict, tDictRow *row) {
         freeRowAndColorIndexes((dict->rows)[dict->insertIndex]);
         (dict->rows)[dict->insertIndex] = row;
         ++(dict->insertIndex);
+    } else {
+        // Shouldn't happen, but at least prevent memory leak.
+        freeRowAndColorIndexes(row);
+        printf("debug insertIndex overflow\n");
     }
 }
 
