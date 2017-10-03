@@ -104,7 +104,7 @@ void getImgInfo(tGifImgInfo *info, uint8_t pf);
 
 void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out);
 
-uint16_t getCode(uint8_t **buffer, uint8_t codeSize);
+uint16_t getCode(uint8_t **buffer, uint8_t codeSize, bool endOfBlock);
 
 tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k);
 

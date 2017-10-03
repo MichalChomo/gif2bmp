@@ -5,7 +5,7 @@
 
 typedef struct {
     uint8_t  *colorIndexes;
-    uint8_t   size;
+    uint16_t   size;
 }tDictRow;
 
 typedef struct {

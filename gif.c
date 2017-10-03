@@ -225,57 +225,60 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
     uint8_t codeSize = 0;
     uint8_t *bufferStart = NULL;
     uint8_t *outStart = *out;
+    bool bufferOverBlock = false;
 
     prevRow.colorIndexes = NULL;
 
     codeSize = *buffer;
     ++buffer; // Code size.
-    if (codeSize < 4) {
-        codeSize = 4; // 4 is minimum LZW code size.
-    } else {
-        ++codeSize; // Increment because of clear code and EOI code.
-    }
-        printf("debug code size %02x\n", codeSize);
+    ++codeSize; // Increment because of clear code and EOI code.
     origCodeSize = codeSize;
+
     clearCode = 1 << (codeSize - 1);
     endCode = clearCode + 1;
 
     blockSize = *buffer;
     ++buffer; // Block size.
 
-        printf("debug block size %02x\n", blockSize);
     dictInit(&dict, 1 << codeSize);
+    bufferStart = buffer;
     // Loop over blocks.
     while (blockSize != 0) {
         bufferStart = buffer;
-            printf("debug blockSize %02x\n", blockSize);
+        if (bufferOverBlock) {
+            // Skip over the first byte after block size byte, because it has 
+            // already been read.
+            ++buffer;
+            bufferOverBlock = false;
+        }
         while ((buffer - bufferStart) < blockSize) {
-            code = getCode(&buffer, codeSize);
+            if ((buffer - bufferStart) > (blockSize - 2)) {
+                code = getCode(&buffer, codeSize, true);
+            } else {
+                code = getCode(&buffer, codeSize, false);
+            }
             if (code == clearCode) {
-            printf("debug CLEAR &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
                 dict.insertIndex = endCode + 1;
                 codeSize = origCodeSize;
                 dictResize(&dict, (1 << codeSize));
-                code = getCode(&buffer, codeSize);
-            printf("debug first CODE %04x\n", code);
+                code = getCode(&buffer, codeSize, false);
                 dictSearch(&dict, code, &row);
                 if (row != NULL) {
-                    memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
+                    memcpy(*out, row->colorIndexes,
+                            row->size * sizeof(uint8_t));
                     *out += row->size;
                     copyRow(&prevRow, row);
                 }
             } else if (code == endCode) {
-                    printf("debug END CODE ****************************\n");
-                code = 0;
                 free(prevRow.colorIndexes);
                 dictDestroy(&dict); 
                 return;
             } else {
                 // Lookup the code in the dictionary.
-                    //printf("debug CODE %04x\n", code);
                 dictSearch(&dict, code, &row);
                 if (row != NULL) {
-                    memcpy(*out, row->colorIndexes, row->size * sizeof(uint8_t));
+                    memcpy(*out, row->colorIndexes,
+                            row->size * sizeof(uint8_t));
                     k = **out; // First color index from current row.
                     *out += row->size;
                     dictInsert(&dict, createRowToAdd(&prevRow, k));
@@ -291,75 +294,61 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out) {
                     copyRow(&prevRow, row);
                     dictInsert(&dict, row);
                 }
-                    //printf("debug END BUFFER %02x %02x ---------------------------\n", *(buffer + 0),*(buffer + 1));
             }
-            if (dict.insertIndex >= (1 << codeSize) && codeSize < LZW_MAX_CODE_SIZE) {
-                //printf("debug buff diff %ld\n", (buffer - bufferStart));
-                printf("debug RESIZE codeSize %d++++++++++++++++++++++++++++++++++++++\n", codeSize);
+            if (dict.insertIndex >= (1 << codeSize) &&
+                    codeSize < LZW_MAX_CODE_SIZE) {
                 ++codeSize;
                 dictResize(&dict, (1 << codeSize));
             }
         }
-        if ((buffer - bufferStart) > blockSize) {
+        if (((buffer - bufferStart) > blockSize)) {
+            // Buffer pointer is over the block size byte.
+            bufferOverBlock = true;
             --buffer;
         }
         blockSize = *buffer;
-
-                //printf("debug buffer after block %02x %02x %02x ---------------------------\n", *(buffer - 1),*(buffer + 0),*(buffer + 1));
         ++buffer;
     }
     free(prevRow.colorIndexes);
     dictDestroy(&dict);
-
-       // printf("\nOUT\n");
-       //         for (int j = 0; j < (img->desc).width * (img->desc).height; ++j) {
-       //             printf("%02x ", *(outStart + j));
-       //         }
-       // printf("\nOUT\n");
 }
 
-uint16_t getCode(uint8_t **buffer, uint8_t codeSize) {
+uint16_t getCode(uint8_t **buffer, uint8_t codeSize, bool endOfBlock) {
     static uint16_t word = 0;
-    static uint8_t bitsRead = 0;
-    // Mask is codeSize count of 1's.
-    uint16_t mask = (1 << codeSize) - 1;
+    static uint8_t bitsRead = 16; // Init to 16, so new word is read at start.
+    uint16_t mask = (1 << codeSize) - 1; // Mask is codeSize count of 1's.
     uint16_t code = 0;
 
     // For testing, there's no other way to reinit static variables.
-    if (codeSize == 255) {
+    if (codeSize == 0xff) {
         word = 0;
         bitsRead = 0;
         return 0;
     }
 
-    if (bitsRead == 0) {
-        memcpy(&word, *buffer, sizeof(uint16_t));
-        *(buffer) += 2;
-    }
     if ((16 - bitsRead) >= codeSize) {
         // All code bits are in the current word.
-        code = word & mask;
-        // Remove used code bits from the word.
-        word >>= codeSize;
+        code = word;
+        word >>= codeSize; // Remove used code bits from the word.
         bitsRead += codeSize;
-        if (bitsRead == 16) {
-            // All code bits from the word were used, set bitsRead to 0, so on
-            // the next call, new word will be read.
-            bitsRead = 0;
-        }
     } else {
         // New word has to be read.
-        // Use bits left in the current word.
-        code = word;
+        code = word; // Use bits left in the current word.
         memcpy(&word, *buffer, sizeof(uint16_t));
-        *(buffer) += 2;
+        *buffer += 2;
+        if (endOfBlock) {
+            uint8_t byte = word; // Save the first byte of the read word.
+            // Read a byte from another block and add it to the word.
+            memcpy(&word, *buffer, sizeof(uint8_t));
+            word <<= 8;
+            word |= byte;
+        }
         // Add needed code bits from the new word.
         code |= word << (16 - bitsRead);
-        code &= mask;
         bitsRead = codeSize - (16 - bitsRead);
-        // Remove used code bits from the new word.
-        word >>= bitsRead;
+        word >>= bitsRead; // Remove used code bits from the new word.
     }
+    code &= mask; // Remove spare bits from the code.
     
     return code;
 }
@@ -367,9 +356,22 @@ uint16_t getCode(uint8_t **buffer, uint8_t codeSize) {
 tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k) {
     tDictRow *rowToAdd = NULL;
 
+    if (prevRow == NULL) {
+        fprintf(stderr, "Previous row is null.\n");
+        return NULL;
+    }
+
     rowToAdd = malloc(sizeof(tDictRow));
+    if (rowToAdd == NULL) {
+        fprintf(stderr, "malloc failed.\n");
+        return NULL;
+    }
     rowToAdd->size = prevRow->size + 1;
     rowToAdd->colorIndexes = malloc(rowToAdd->size * sizeof(uint8_t));
+    if (rowToAdd->colorIndexes == NULL) {
+        fprintf(stderr, "malloc failed.\n");
+        return NULL;
+    }
     memset(rowToAdd->colorIndexes, 0, rowToAdd->size * sizeof(uint8_t));
     memcpy(rowToAdd->colorIndexes, prevRow->colorIndexes,
             prevRow->size * sizeof(uint8_t));
@@ -400,6 +402,10 @@ void copyRow(tDictRow *dest, tDictRow *src) {
     }
     dest->size = src->size;
     dest->colorIndexes = malloc(dest->size * sizeof(uint8_t));
+    if (dest->colorIndexes == NULL) {
+        fprintf(stderr, "malloc failed.\n");
+        return;
+    }
     memcpy(dest->colorIndexes, src->colorIndexes,
             src->size * sizeof(uint8_t));
 }
