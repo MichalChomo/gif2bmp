@@ -26,4 +26,4 @@ $(APP): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -rf *.o $(APP) *.log
+	rm -rf *.o $(APP) *.log img/*.bmp

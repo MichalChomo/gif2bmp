@@ -13,10 +13,10 @@ void testGetCodeZeroes(CuTest *tc) {
     memset(buffer, 0, 9 * sizeof(uint8_t));
     bufferStart = buffer;
 
-    getCode(NULL, 0xff);
+    getCode(NULL, 0xff, false);
 
     for (; codeSize <= LZW_MAX_CODE_SIZE; ++codeSize) {
-        code = getCode(&buffer, codeSize);
+        code = getCode(&buffer, codeSize, false);
         codeSum += code;
     }
 
@@ -37,10 +37,10 @@ void testGetCodeOnes(CuTest *tc) {
     memset(buffer, 0xff, 9 * sizeof(uint8_t));
     bufferStart = buffer;
 
-    getCode(NULL, 0xff);
+    getCode(NULL, 0xff, false);
 
     for (; codeSize <= LZW_MAX_CODE_SIZE; ++codeSize) {
-        code = getCode(&buffer, codeSize);
+        code = getCode(&buffer, codeSize, false);
         codeSum += code;
         expectedSum += (1 << codeSize) - 1;
     }
@@ -72,13 +72,13 @@ void testGetCodeSequence(CuTest *tc) {
 
     buffer = bufferStart;
 
-    getCode(NULL, 0xff);
+    getCode(NULL, 0xff, false);
 
     for (uint8_t i = 0; i < 6; ++i) {
         if (i == 3) {
             ++codeSize;
         }
-        code = getCode(&buffer, codeSize);
+        code = getCode(&buffer, codeSize, false);
         if (code != expectedCodes[i]) {
             fail = true;
         }

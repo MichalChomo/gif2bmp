@@ -322,7 +322,7 @@ uint16_t getCode(uint8_t **buffer, uint8_t codeSize, bool endOfBlock) {
     // For testing, there's no other way to reinit static variables.
     if (codeSize == 0xff) {
         word = 0;
-        bitsRead = 0;
+        bitsRead = 16;
         return 0;
     }
 
