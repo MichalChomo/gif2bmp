@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Execute from gif2bmp directory.
+
+for f in img/*.gif
+do
+    ./gif2bmp -i $f -o ${f%.*}.bmp
+done

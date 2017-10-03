@@ -2,6 +2,4 @@
 *.swo
 *.o
 gif2bmp
-*.gif
-*.bmp
 tags
