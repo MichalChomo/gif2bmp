@@ -7,7 +7,7 @@ OBJS = $(subst .c,.o,$(wildcard *.c))
 OBJS_NO_MAIN = $(filter-out main.o, $(OBJS))
 TEST_FILES = $(wildcard ./tests/*Test.c)
 
-.PHONY: clean debug
+.PHONY: clean debug doc
 
 all: $(APP)
 debug: CFLAGS += -g
@@ -26,4 +26,7 @@ $(APP): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -rf *.o $(APP) *.log img/*.bmp
+	rm -rf *.o $(APP) *.log img/*.bmp doc/html doc/latex
+
+doc:
+	doxygen doc/Doxyfile

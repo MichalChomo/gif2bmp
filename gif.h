@@ -17,6 +17,9 @@
 #define GIF_IMG_INTERLACE_FLAG 0x40
 #define GIF_IMG_SORT_FLAG 0x20
 
+/**
+ * Logical screen descriptor
+ */
 typedef struct {
     uint16_t width;
     uint16_t height;
