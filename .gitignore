@@ -3,3 +3,5 @@
 *.o
 gif2bmp
 tags
+doc/latex
+doc/html

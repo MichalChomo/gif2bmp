@@ -28,4 +28,19 @@ void dictReinit(tDict *dict, uint16_t index);
 
 void freeRowAndColorIndexes(tDictRow *row);
 
+/**
+ * Allocate memory and copy color indexes to new dictionary row.
+ * @param[in] prevRow Previous row.
+ * @param[in] k       First color index, either from previous or current row.
+ * @return Pointer to the new row.
+ */
+tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k);
+
+/**
+ * Copy dictionary row.
+ * @param[out] dest Row to copy to.
+ * @param[in]  src  Row to copy.
+ */
+void copyRow(tDictRow *dest, tDictRow *src);
+
 #endif

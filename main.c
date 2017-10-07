@@ -1,8 +1,15 @@
-//  Name: Michal Chomo
-// Login: xchomo01
-//  Date: 5.5.2017
-//
-//  Main program, contains parsing arguments and calling library functions.
+/**
+ * @mainpage gif2bmp
+ *
+ * @section intro Introduction
+ * gif2bmp is an app for ... you guessed it, converting GIF images to BMP
+ * images. It's a school assigment for Data Coding and Compression course.
+ * Written in C language, standard C99.
+ *
+ * @section usage Usage
+ * 1. make
+ * 2. ./gif2bmp [-i ifile] [-o ofile] [-l logfile] | -h
+ */
 
 #include "gif2bmp.h"
 

@@ -89,3 +89,46 @@ void freeRowAndColorIndexes(tDictRow *row) {
         row = NULL;
     }
 }
+
+tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k) {
+    tDictRow *rowToAdd = NULL;
+
+    if (prevRow == NULL) {
+        fprintf(stderr, "Previous row is null.\n");
+        return NULL;
+    }
+
+    rowToAdd = malloc(sizeof(tDictRow));
+    if (rowToAdd == NULL) {
+        fprintf(stderr, "malloc failed.\n");
+        return NULL;
+    }
+    rowToAdd->size = prevRow->size + 1;
+    rowToAdd->colorIndexes = malloc(rowToAdd->size * sizeof(uint8_t));
+    if (rowToAdd->colorIndexes == NULL) {
+        fprintf(stderr, "malloc failed.\n");
+        return NULL;
+    }
+    memset(rowToAdd->colorIndexes, 0, rowToAdd->size * sizeof(uint8_t));
+    memcpy(rowToAdd->colorIndexes, prevRow->colorIndexes,
+            prevRow->size * sizeof(uint8_t));
+    rowToAdd->colorIndexes += prevRow->size;
+    memcpy(rowToAdd->colorIndexes, &k, sizeof(uint8_t));
+    rowToAdd->colorIndexes -= prevRow->size;
+
+    return rowToAdd;
+}
+
+void copyRow(tDictRow *dest, tDictRow *src) {
+    if (dest->colorIndexes != NULL) {
+        free(dest->colorIndexes);
+    }
+    dest->size = src->size;
+    dest->colorIndexes = malloc(dest->size * sizeof(uint8_t));
+    if (dest->colorIndexes == NULL) {
+        fprintf(stderr, "malloc failed.\n");
+        return;
+    }
+    memcpy(dest->colorIndexes, src->colorIndexes,
+            src->size * sizeof(uint8_t));
+}

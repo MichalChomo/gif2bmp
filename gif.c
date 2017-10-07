@@ -133,18 +133,6 @@ void getColorTable(tColor **ct, uint16_t size, uint8_t *buffer) {
     *ct = ctStart;
 }
 
-void printColorTable(tColor *ct, uint16_t size) {
-    tColor c;
-
-    printf("Global color table:\n");
-    for (; size > 0; --size) {
-        c = *ct;
-        printf("%02x %02x %02x||", c.red, c.green, c.blue);
-        ++ct;
-    }
-    printf("\n");
-}
-
 int isGce(uint8_t *buffer) {
     uint16_t separator = GIF_GC_EXT_SEPARATOR;
 
@@ -353,35 +341,6 @@ uint16_t getCode(uint8_t **buffer, uint8_t codeSize, bool endOfBlock) {
     return code;
 }
 
-tDictRow *createRowToAdd(tDictRow *prevRow, uint8_t k) {
-    tDictRow *rowToAdd = NULL;
-
-    if (prevRow == NULL) {
-        fprintf(stderr, "Previous row is null.\n");
-        return NULL;
-    }
-
-    rowToAdd = malloc(sizeof(tDictRow));
-    if (rowToAdd == NULL) {
-        fprintf(stderr, "malloc failed.\n");
-        return NULL;
-    }
-    rowToAdd->size = prevRow->size + 1;
-    rowToAdd->colorIndexes = malloc(rowToAdd->size * sizeof(uint8_t));
-    if (rowToAdd->colorIndexes == NULL) {
-        fprintf(stderr, "malloc failed.\n");
-        return NULL;
-    }
-    memset(rowToAdd->colorIndexes, 0, rowToAdd->size * sizeof(uint8_t));
-    memcpy(rowToAdd->colorIndexes, prevRow->colorIndexes,
-            prevRow->size * sizeof(uint8_t));
-    rowToAdd->colorIndexes += prevRow->size;
-    memcpy(rowToAdd->colorIndexes, &k, sizeof(uint8_t));
-    rowToAdd->colorIndexes -= prevRow->size;
-
-    return rowToAdd;
-}
-
 void freeGif(tGif *gif) {
     if ((gif->info).isGlobalTable > 0) {
         free(gif->globalColorTable);
@@ -394,18 +353,4 @@ void freeGif(tGif *gif) {
     free(gif->images);
     free(gif->gceArr);
     free(gif->colorIndexes);
-}
-
-void copyRow(tDictRow *dest, tDictRow *src) {
-    if (dest->colorIndexes != NULL) {
-        free(dest->colorIndexes);
-    }
-    dest->size = src->size;
-    dest->colorIndexes = malloc(dest->size * sizeof(uint8_t));
-    if (dest->colorIndexes == NULL) {
-        fprintf(stderr, "malloc failed.\n");
-        return;
-    }
-    memcpy(dest->colorIndexes, src->colorIndexes,
-            src->size * sizeof(uint8_t));
 }
