@@ -199,8 +199,8 @@ void decodeLzwData(tGifImg *img, uint8_t *buffer, uint8_t **out);
 uint16_t getCode(uint8_t **buffer, uint8_t codeSize, bool endOfBlock);
 
 /**
- * Free all allocated memory in GIF struct.
- * @param[in] gif GIF struct.
+ * Free all memory allocated for GIF struct.
+ * @param[in] gif Pointer to GIF struct.
  */
 void freeGif(tGif *gif);
 

@@ -28,8 +28,7 @@ void initBmp(tBmp *bmp, tGif *gif) {
         } else if ((gif->info).isGlobalTable > 0) {
             colorTable = gif->globalColorTable;
         } else {
-            // This shouldn't happen.
-            printf("debug initBmp loop over images, no table\n");
+            fprintf(stderr, "No color table.\n");
         }
         fillBmpData(&(bmp->data), colorTable, &colorIndexesPtr,
                 (gif->images)[i].desc.height, (gif->images)[i].desc.width,
@@ -38,7 +37,8 @@ void initBmp(tBmp *bmp, tGif *gif) {
     bmp->data = dataStart;
 }
 
-void fillBmpData(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes, uint16_t height, uint16_t width, uint8_t padding) {
+void fillBmpData(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes,
+        uint16_t height, uint16_t width, uint8_t padding) {
     for (uint16_t i = 0; i < height; ++i) {
         for (uint16_t j = 0; j < width; ++j) {
             **bmpData = (colorTable[**colorIndexes]).blue;
