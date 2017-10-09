@@ -1,9 +1,3 @@
-//  Name: Michal Chomo
-// Login: xchomo01
-//  Date: 5.5.2017
-//
-//  Definitions of functions for GIF to BMP conversion.
-
 #include "gif2bmp.h"
 #include "dictionary.h"
 #include "gif.h"
@@ -17,13 +11,6 @@ int gif2bmp(tGIF2BMP *gif2bmp, FILE *inputFile, FILE *outputFile) {
 
     loadFileToBuffer(&buffer, inputFile, gif2bmp->gifSize);
     bufferStart = buffer;
-
-    //for (int i = 0; i < gif2bmp->gifSize - 1; ++i) {
-    //    printf("%02x ", *buffer);
-    //    ++buffer;
-    //}
-    //    printf("%02x ", *buffer);
-    //buffer = bufferStart;
 
     if (0 != parseGif(&gif, buffer)) {
         fprintf(stderr, "Error parsing gif file\n");
@@ -82,8 +69,8 @@ int createLogfile(char *fileName, tGIF2BMP *g2b) {
         fprintf(stderr, "Cannot open logfile %s.\n", fileName);
         return 1;
     }
-    fprintf(lfp, "login = %s\nuncodedSize = %ld\ncodedSize = %ld\n", LOGIN,
-            g2b->gifSize, g2b->bmpSize);
+    fprintf(lfp, "uncodedSize = %ld\ncodedSize = %ld\n", g2b->gifSize,
+            g2b->bmpSize);
     fclose(lfp);
 
     return 0;
