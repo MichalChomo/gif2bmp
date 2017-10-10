@@ -30,26 +30,141 @@ void initBmp(tBmp *bmp, tGif *gif) {
         } else {
             fprintf(stderr, "No color table.\n");
         }
-        fillBmpData(&(bmp->data), colorTable, &colorIndexesPtr,
-                (gif->images)[i].desc.height, (gif->images)[i].desc.width,
-                padding);
+        if ((gif->images)[i].info.isInterlace == 0) {
+            fillBmpData(&(bmp->data), colorTable, &colorIndexesPtr,
+                    (gif->images)[i].desc.height, (gif->images)[i].desc.width,
+                    padding);
+        } else {
+            fillBmpDataInterlace(&(bmp->data), colorTable, &colorIndexesPtr,
+                    (gif->images)[i].desc.height, (gif->images)[i].desc.width,
+                    padding);
+        }
     }
     bmp->data = dataStart;
 }
 
 void fillBmpData(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes,
         uint16_t height, uint16_t width, uint8_t padding) {
+    uint16_t index = 0;
     for (uint16_t i = 0; i < height; ++i) {
         for (uint16_t j = 0; j < width; ++j) {
-            **bmpData = (colorTable[**colorIndexes]).blue;
-            ++(*bmpData);
-            **bmpData = (colorTable[**colorIndexes]).green;
-            ++(*bmpData);
-            **bmpData = (colorTable[**colorIndexes]).red;
-            ++(*bmpData);
+            index = j * 3;
+            (*bmpData)[(i * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
             ++(*colorIndexes);
         }
-        *bmpData += padding;
+    }
+}
+
+void fillBmpDataInterlace(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes, uint16_t height, uint16_t width, uint8_t padding) {
+    uint16_t index = 0;
+    // First pass - 0th lines from each strip.
+    for (uint16_t i = 0; i < height; i += 8) {
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[(i * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+    }
+    // Second pass - 4th lines from each strip.
+    for (uint16_t i = 4; i < height; i += 8) {
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[(i * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+    }
+    // Third pass - 2nd and 6th lines from each strip.
+    for (uint16_t i = 2; i < height; i += 8) {
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[(i * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+        if ((i + 4) >= height) {
+            break;
+        }
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[((i + 4) * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[((i + 4) * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[((i + 4) * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+    }
+    // Fourth pass - 1st, 3rd, 5th and 7th lines from each strip.
+    for (uint16_t i = 1; i < height; i += 8) {
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[(i * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[(i * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+        if ((i + 2) >= height) {
+            break;
+        }
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[((i + 2) * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[((i + 2) * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[((i + 2) * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+        if ((i + 4) >= height) {
+            break;
+        }
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[((i + 4) * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[((i + 4) * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[((i + 4) * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
+        if ((i + 6) >= height) {
+            break;
+        }
+        for (uint16_t j = 0; j < width; ++j) {
+            index = j * 3;
+            (*bmpData)[((i + 6) * (width * 3 + padding)) + index] =
+                (colorTable[**colorIndexes]).blue;
+            (*bmpData)[((i + 6) * (width * 3 + padding)) + index + 1] =
+                (colorTable[**colorIndexes]).green;
+            (*bmpData)[((i + 6) * (width * 3 + padding)) + index + 2] =
+                (colorTable[**colorIndexes]).red;
+            ++(*colorIndexes);
+        }
     }
 }
 

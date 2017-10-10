@@ -54,7 +54,7 @@ typedef struct {
 /**
  * Initialize BMP image and fill its data.
  * @param[in, out] bmp Pointer to BMP struct.
- * @param[in]  gif Pointer to GIF struct.
+ * @param[in]      gif Pointer to GIF struct.
  */
 void initBmp(tBmp *bmp, tGif *gif);
 
@@ -81,21 +81,35 @@ void freeBmp(tBmp *bmp);
 
 /**
  * Write the BMP image to file.
- * @param[out] fp Pointer to file.
- * @param[in] bmp Pointer to BMP struct.
+ * @param[out] fp  Pointer to file.
+ * @param[in]  bmp Pointer to BMP struct.
  */
 void writeBmpToFile(FILE *fp, tBmp *bmp);
 
 /**
  * Fill the BMP image data with the GIF image data.
- * @param[out] bmpData Pointer to pointer to BMP data.
- * @param[in] colorTable Pointer to the color table.
- * @param[in] colorIndexes Pointer to pointer to the color indexes.
- * @param[in] height Height of the image.
- * @param[in] width Width of the image.
- * @param[in] padding BMP data has to be aligned to 4 bytes, so if width * 3
- * is not a multiple of 4, it has to be padded.
+ * @param[out] bmpData      Pointer to pointer to BMP data.
+ * @param[in]  colorTable   Pointer to the color table.
+ * @param[in]  colorIndexes Pointer to pointer to the color indexes.
+ * @param[in]  height       Height of the image.
+ * @param[in]  width        Width of the image.
+ * @param[in]  padding      BMP data has to be aligned to 4 bytes, so if
+ *                          width * 3 is not a multiple of 4, it has to be
+ *                          padded.
  */
 void fillBmpData(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes, uint16_t height, uint16_t width, uint8_t padding);
+
+/**
+ * Fill the BMP image data with the GIF image data that are interlaced.
+ * @param[out] bmpData      Pointer to pointer to BMP data.
+ * @param[in]  colorTable   Pointer to the color table.
+ * @param[in]  colorIndexes Pointer to pointer to the color indexes.
+ * @param[in]  height       Height of the image.
+ * @param[in]  width        Width of the image.
+ * @param[in]  padding      BMP data has to be aligned to 4 bytes, so if
+ *                          width * 3 is not a multiple of 4, it has to be
+ *                          padded.
+ */
+void fillBmpDataInterlace(uint8_t **bmpData, tColor *colorTable, uint8_t **colorIndexes, uint16_t height, uint16_t width, uint8_t padding);
 
 #endif

@@ -41,7 +41,7 @@ void loadFileToBuffer(uint8_t **buffer, FILE *fp, int64_t size);
 /**
  * Write information about sizes to log file.
  * @param[in] fileName  Name of the log file.
- * @param[in] codedSize Struct with file sizes.
+ * @param[in] g2b       Struct with file sizes.
  * @return 0 success, 1 fail.
  */
 int createLogfile(char *fileName, tGIF2BMP *g2b);
